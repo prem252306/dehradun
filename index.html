@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Welcome Home, Hetvi — Cinematic Reunion (Polished)</title>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg-1:#0b1726; --bg-2:#0d1e2f; --accent:#6dc9ff; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;font-family:Poppins,system-ui,Segoe UI,Roboto;overflow:hidden;
+    background:linear-gradient(180deg,var(--bg-1),var(--bg-2));transition:background 1200ms ease;}
+  .control{position:fixed;z-index:200;backdrop-filter: blur(6px);
+    background:rgba(255,255,255,0.06);color:#fff;border:1px solid rgba(255,255,255,0.04);
+    padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:600;}
+  #testBtn{left:18px;top:18px} #musicBtn{left:18px;bottom:18px}
+  #countdown{position:fixed;top:18px;right:18px;padding:10px 14px;border-radius:12px;
+    background:rgba(0,0,0,0.35);color:#cfe8ff;z-index:200;font-weight:700}
+  #themeLabel{position:fixed;right:18px;bottom:18px;padding:8px 10px;border-radius:10px;
+    background:rgba(255,255,255,0.04);z-index:200;color:#dfefff;font-weight:600}
+
+  #flightArea{position:absolute;left:0;right:0;top:6vh;height:36vh;pointer-events:none;z-index:30}
+  svg#mapSvg{width:100%;height:100%;display:block}
+  .cityLabel{fill:rgba(255,255,255,0.9);font-size:13px;opacity:.95}
+  #trail{stroke:rgba(255,255,255,0.18);stroke-width:4;fill:none;filter:blur(6px);opacity:0}
+  #plane{filter:drop-shadow(0 10px 22px rgba(0,0,0,0.6));opacity:0}
+
+  #welcomeWrap{position:fixed;left:50%;transform:translateX(-50%);top:34%;z-index:120;text-align:center;pointer-events:none}
+  #welcome{font-family:'Great Vibes',cursive;color:#fff;font-size:44px;text-shadow:0 6px 28px rgba(0,0,0,0.25);
+    opacity:0;transition:opacity 900ms ease, transform 900ms ease}
+
+  .coupleWrap{position:fixed;left:50%;top:44%;transform:translate(-50%,-6%);width:78%;max-width:920px;height:auto;
+    aspect-ratio:16/9;border-radius:18px;overflow:hidden;box-shadow:0 40px 120px rgba(2,6,20,0.6);z-index:110;
+    opacity:0;transition:opacity 900ms ease, transform 900ms ease}
+  .coupleWrap img{width:100%;height:100%;object-fit:cover;display:block}
+
+  /* wobble / runway pulse keyframes for final reveal */
+  @keyframes landWobble {
+    0% { transform: translate(-50%,-6%) scale(1.03) rotate(0deg); box-shadow: 0 40px 120px rgba(2,6,20,0.6); }
+    25% { transform: translate(-48%,-6%) scale(1.05) rotate(-0.6deg); box-shadow: 0 46px 140px rgba(120,180,255,0.38); }
+    50% { transform: translate(-52%,-6%) scale(1.04) rotate(0.6deg); box-shadow: 0 38px 110px rgba(120,180,255,0.28); }
+    75% { transform: translate(-50%,-6%) scale(1.05) rotate(-0.3deg); box-shadow: 0 44px 130px rgba(120,180,255,0.36); }
+    100% { transform: translate(-50%,-6%) scale(1.03) rotate(0deg); box-shadow: 0 40px 120px rgba(2,6,20,0.6); }
+  }
+
+  #particlesLayer,#foodLayer,#heartsLayer{position:fixed;inset:0;pointer-events:none;z-index:90}
+  .particle{position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(180,210,255,0.7);filter:blur(0.8px);opacity:.9}
+  .heart{position:absolute;font-size:28px;opacity:0.95;filter:drop-shadow(0 8px 18px rgba(255,80,120,0.12))}
+  .food{position:absolute;font-size:28px;opacity:0.95}
+
+  canvas#rainCanvas{position:fixed;left:0;top:0;width:100%;height:100%;z-index:80;pointer-events:none}
+
+  @media (max-width:900px){ #welcome{font-size:30px} .coupleWrap{width:92%;aspect-ratio:4/3} }
+</style>
+</head>
+<body>
+
+<button id="testBtn" class="control">🧭 Test Arrival Mode</button>
+<button id="musicBtn" class="control">🎵 Play Music</button>
+<div id="countdown">Loading countdown…</div>
+<div id="themeLabel">Theme</div>
+
+<div id="flightArea">
+  <svg id="mapSvg" viewBox="0 0 1200 300" preserveAspectRatio="none">
+    <path id="flightPath" d="M80 220 C 320 40, 820 40, 1120 220" stroke="rgba(255,255,255,0.08)" stroke-width="2" fill="none" stroke-dasharray="6 8"/>
+    <path id="trail" d="M80 220 C 320 40, 820 40, 1120 220" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <circle cx="80" cy="220" r="6" fill="#fff" opacity="0.85" />
+    <text x="80" y="238" class="cityLabel" text-anchor="middle">Dehradun</text>
+    <circle cx="1120" cy="220" r="6" fill="#fff" opacity="0.85" />
+    <text x="1120" y="238" class="cityLabel" text-anchor="middle">Ahmedabad</text>
+    <g id="plane" transform="translate(80,220)"><path d="M4 10 L30 4 L30 16 L4 10 Z" fill="#fff"/></g>
+  </svg>
+</div>
+
+<canvas id="rainCanvas"></canvas>
+
+<div id="welcomeWrap"><div id="welcome">Welcome home, dear Hetvi 💙</div></div>
+<div class="coupleWrap" id="coupleWrap"><img id="coupleImg" src="couple.png" alt="Couple"></div>
+
+<div id="particlesLayer"></div>
+<div id="foodLayer"></div>
+<div id="heartsLayer"></div>
+
+<audio id="audioMorning" src="bg_morning.mp3" preload="auto"></audio>
+<audio id="audioAfternoon" src="bg_afternoon.mp3" preload="auto"></audio>
+<audio id="audioEvening" src="bg_evening.mp3" preload="auto"></audio>
+<audio id="audioNight" src="bg_night.mp3" preload="auto"></audio>
+
+<script>
+/* CONFIG: keep these files in same folder:
+   couple.png
+   bg_morning.mp3
+   bg_afternoon.mp3
+   bg_evening.mp3
+   bg_night.mp3
+*/
+
+const arrivalISO = '2025-11-21T17:00:00+05:30';
+const countdownEl = document.getElementById('countdown');
+const themeLabel = document.getElementById('themeLabel');
+const flightPath = document.getElementById('flightPath');
+const trail = document.getElementById('trail');
+const planeG = document.getElementById('plane');
+const welcome = document.getElementById('welcome');
+const coupleWrap = document.getElementById('coupleWrap');
+
+const particlesLayer = document.getElementById('particlesLayer');
+const heartsLayer = document.getElementById('heartsLayer');
+const foodLayer = document.getElementById('foodLayer');
+
+const rainCanvas = document.getElementById('rainCanvas');
+const ctx = rainCanvas.getContext('2d');
+
+const audioMorning = document.getElementById('audioMorning');
+const audioAfternoon = document.getElementById('audioAfternoon');
+const audioEvening = document.getElementById('audioEvening');
+const audioNight = document.getElementById('audioNight');
+
+let activeAudio = null;
+let currentTheme = null;
+let pollingInterval = null;
+
+/* audio fade helpers */
+function fadeIn(audio, dur=3000){
+  if(!audio) return;
+  audio.volume = 0;
+  audio.play().catch(()=>{});
+  const start = performance.now();
+  function tick(now){ const t = Math.min(1,(now-start)/dur); audio.volume = t*0.9; if(t<1) requestAnimationFrame(tick); }
+  requestAnimationFrame(tick);
+}
+function fadeOut(audio, dur=1200){
+  if(!audio) return;
+  const startVol = audio.volume || 0.9;
+  const start = performance.now();
+  function tick(now){ const t = Math.min(1,(now-start)/dur); audio.volume = startVol * (1 - t); if(t<1) requestAnimationFrame(tick); else audio.pause(); }
+  requestAnimationFrame(tick);
+}
+
+/* theme by hour */
+function getThemeByHour(hour){
+  if(hour >=5 && hour <11) return 'morning';
+  if(hour >=11 && hour <16) return 'afternoon';
+  if(hour >=16 && hour <19) return 'evening';
+  return 'night';
+}
+
+/* Apply theme */
+function applyTheme(theme){
+  if(currentTheme === theme) return;
+  currentTheme = theme;
+  particlesLayer.innerHTML=''; heartsLayer.innerHTML=''; foodLayer.innerHTML='';
+  stopRain();
+  if(activeAudio){ fadeOut(activeAudio); activeAudio = null; }
+
+  if(theme === 'morning'){
+    document.body.style.background = 'linear-gradient(180deg,#fff5d9,#ffd58a)';
+    themeLabel.textContent = 'Morning';
+    spawnParticles(40,'particle'); fadeIn(audioMorning,3000); activeAudio=audioMorning;
+  } else if(theme === 'afternoon'){
+    document.body.style.background = 'linear-gradient(180deg,#cfeefc,#85c7f9)';
+    themeLabel.textContent = 'Afternoon';
+    spawnParticles(36,'particle'); fadeIn(audioAfternoon,3000); activeAudio=audioAfternoon;
+  } else if(theme === 'evening'){
+    document.body.style.background = 'linear-gradient(180deg,#ffb58a,#2b1d28)';
+    themeLabel.textContent = 'Evening';
+    spawnParticles(28,'heart'); spawnFood(6); fadeIn(audioEvening,3000); activeAudio=audioEvening;
+  } else {
+    document.body.style.background = 'radial-gradient(circle at 40% 20%, #0b1726, #0d1e2f 80%)';
+    themeLabel.textContent = 'Night';
+    spawnParticles(28,'particle'); startRain(70); fadeIn(audioNight,3000); activeAudio=audioNight;
+  }
+}
+
+/* Force apply (used in simulation) */
+function forceApplyTheme(theme){
+  particlesLayer.innerHTML=''; heartsLayer.innerHTML=''; foodLayer.innerHTML='';
+  stopRain();
+  if(activeAudio){ fadeOut(activeAudio); activeAudio=null; }
+  currentTheme = theme;
+  if(theme === 'morning'){ document.body.style.background='linear-gradient(180deg,#fff5d9,#ffd58a)'; themeLabel.textContent='Morning'; spawnParticles(40,'particle'); fadeIn(audioMorning,3000); activeAudio=audioMorning;}
+  else if(theme === 'afternoon'){ document.body.style.background='linear-gradient(180deg,#cfeefc,#85c7f9)'; themeLabel.textContent='Afternoon'; spawnParticles(36,'particle'); fadeIn(audioAfternoon,3000); activeAudio=audioAfternoon;}
+  else if(theme === 'evening'){ document.body.style.background='linear-gradient(180deg,#ffb58a,#2b1d28)'; themeLabel.textContent='Evening'; spawnParticles(28,'heart'); spawnFood(6); fadeIn(audioEvening,3000); activeAudio=audioEvening;}
+  else { document.body.style.background='radial-gradient(circle at 40% 20%, #0b1726, #0d1e2f 80%)'; themeLabel.textContent='Night'; spawnParticles(28,'particle'); startRain(70); fadeIn(audioNight,3000); activeAudio=audioNight;}
+}
+
+/* spawn helpers */
+function spawnParticles(n,type='particle'){
+  for(let i=0;i<n;i++){
+    const el=document.createElement('div');
+    if(type==='particle'){ el.className='particle'; el.style.left=(Math.random()*100)+'vw'; el.style.top=(Math.random()*100)+'vh'; el.style.width=(3+Math.random()*6)+'px'; el.style.height=el.style.width; particlesLayer.appendChild(el); setTimeout(()=>el.remove(),11000); }
+    else { el.className='heart'; el.textContent='💖'; el.style.left=(10+Math.random()*80)+'vw'; el.style.bottom=(10+Math.random()*10)+'vh'; heartsLayer.appendChild(el); const dur=6000+Math.random()*4000; el.animate([{transform:'translateY(0)'},{transform:'translateY(-'+(40+Math.random()*80)+'vh)'}],{duration:dur,iterations:1,easing:'ease-out'}); setTimeout(()=>el.remove(),dur+200); }
+  }
+}
+function spawnFood(n=6){ const list=['🍜','☕','🍰','🍱','🍦','🍩','🍕','🍪']; for(let i=0;i<n;i++){ const el=document.createElement('div'); el.className='food'; el.textContent=list[i%list.length]; el.style.left=(10+Math.random()*80)+'vw'; el.style.bottom='-40px'; el.style.fontSize=(20+Math.random()*30)+'px'; foodLayer.appendChild(el); const dur=7000+Math.random()*3000; el.animate([{transform:'translateY(0)'},{transform:'translateY(-110vh)'}],{duration:dur,iterations:1,easing:'linear',delay:i*200}); setTimeout(()=>el.remove(),dur+300);}}
+
+/* RAIN */
+let rainDrops=[], rainRunning=false, lastTime=0;
+function resizeRain(){ rainCanvas.width = innerWidth*devicePixelRatio; rainCanvas.height = innerHeight*devicePixelRatio; rainCanvas.style.width = innerWidth+'px'; rainCanvas.style.height = innerHeight+'px'; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+window.addEventListener('resize', resizeRain);
+function startRain(count=60){ rainRunning=true; resizeRain(); rainDrops=[]; const density=Math.min(200,Math.floor(count*(innerWidth/1366))); for(let i=0;i<density;i++){ rainDrops.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,len:8+Math.random()*20,speed:220+Math.random()*260,width:1+Math.random()*1.6,opacity:0.06+Math.random()*0.15}); } lastTime=performance.now(); requestAnimationFrame(rainTick); }
+function stopRain(){ rainRunning=false; if(ctx) ctx.clearRect(0,0,innerWidth,innerHeight); }
+function rainTick(now){ if(!rainRunning) return; const dt=(now-lastTime)/1000||0.016; lastTime=now; ctx.clearRect(0,0,innerWidth,innerHeight); ctx.fillStyle='rgba(5,10,20,0.06)'; ctx.fillRect(0,0,innerWidth,innerHeight); for(let d of rainDrops){ d.y += d.speed * dt; d.x += Math.sin(now/1000 + d.x)*0.1; if(d.y > innerHeight+20){ d.y = -20 - Math.random()*200; d.x = Math.random()*innerWidth; } ctx.beginPath(); ctx.strokeStyle = `rgba(160,200,255,${d.opacity})`; ctx.lineWidth = d.width; ctx.moveTo(d.x,d.y); ctx.lineTo(d.x - d.width*0.6, d.y + d.len); ctx.stroke(); } requestAnimationFrame(rainTick); }
+
+/* Plane helpers */
+const pathLen = flightPath.getTotalLength();
+function pointAt(t){ const d = Math.max(0, Math.min(1,t)) * pathLen; return flightPath.getPointAtLength(d); }
+function setPlaneAt(t,rot){ const p = pointAt(t); planeG.setAttribute('transform', `translate(${p.x},${p.y}) rotate(${rot||0})`); }
+
+/* animatePlane with acceleration near end and optional ondone */
+function animatePlane(duration=6000, ondone){
+  planeG.style.opacity = 1; trail.style.opacity = 1;
+  const start = performance.now();
+  function frame(now){
+    const raw = Math.min(1,(now-start)/duration);
+    // custom easing: slow start, accelerate near end (exponent >1)
+    const e = Math.pow(raw, 1.8);
+    setPlaneAt(e, e*28 - 14);
+    // trail stronger as we get closer
+    trail.setAttribute('stroke-dasharray', `${Math.max(1,pathLen*0.05)} ${pathLen}`);
+    trail.style.strokeDashoffset = - (pathLen * e);
+    if(raw < 1) requestAnimationFrame(frame);
+    else {
+      // final tiny accelerate "burst" to make landing feel snappy
+      // animate last fast nudge (0.95->1)
+      const burstStart = performance.now();
+      const burstDur = 380;
+      function burst(now2){
+        const br = Math.min(1,(now2-burstStart)/burstDur);
+        const be = Math.min(1, 0.95 + Math.pow(br,2)*0.05); // push final 5% quickly
+        setPlaneAt(be, be*28 - 14);
+        if(br < 1) requestAnimationFrame(burst);
+        else {
+          planeG.style.opacity = 0; trail.style.opacity = 0;
+          // runway wobble / landing pulse on coupleWrap
+          runLandingWobble();
+          if(ondone) ondone();
+        }
+      }
+      requestAnimationFrame(burst);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* landing wobble/pulse */
+function runLandingWobble(){
+  // apply CSS animation using element.animate
+  const el = coupleWrap;
+  // ensure visible before wobble
+  el.style.opacity = 1;
+  // keyframes: small translate + rotate + scale + shadow pulse
+  el.animate([
+    { transform: 'translate(-50%,-6%) scale(1.03) rotate(0deg)', offset: 0 },
+    { transform: 'translate(-48%,-6%) scale(1.05) rotate(-0.6deg)', offset: 0.18 },
+    { transform: 'translate(-52%,-6%) scale(1.04) rotate(0.6deg)', offset: 0.45 },
+    { transform: 'translate(-50%,-6%) scale(1.05) rotate(-0.3deg)', offset: 0.75 },
+    { transform: 'translate(-50%,-6%) scale(1.03) rotate(0deg)', offset: 1 }
+  ], {
+    duration: 900,
+    easing: 'cubic-bezier(.2,.9,.2,1)',
+    fill: 'forwards'
+  });
+  // subtle page shake via body translate (tiny)
+  document.body.animate([
+    { transform: 'translateY(0)' },
+    { transform: 'translateY(-6px)' },
+    { transform: 'translateY(0)' }
+  ], { duration: 700, easing: 'ease-out' });
+}
+
+/* Countdown + plane continuous progress logic */
+const targetDate = new Date(arrivalISO);
+const initialNow = new Date();
+let initialRemaining = Math.max(0, targetDate - initialNow);
+let countdownTimer = null;
+
+function formatRemaining(ms){ if(ms <= 0) return '00d 00h 00m 00s'; let d = Math.floor(ms/86400000); ms%=86400000; let h = Math.floor(ms/3600000); ms%=3600000; let m = Math.floor(ms/60000); ms%=60000; let s = Math.floor(ms/1000); return `${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`; }
+
+function updateCountdownAndPlane(){
+  const now = new Date();
+  const remaining = Math.max(0, targetDate - now);
+  countdownEl.textContent = formatRemaining(remaining);
+  // compute overall plane progress based on initialRemaining and remaining
+  let progress = 0;
+  if(initialRemaining <= 0) progress = 1;
+  else progress = 1 - (remaining / initialRemaining);
+  progress = Math.min(1, Math.max(0, progress));
+  // map progress through an ease to make motion natural; slight acceleration when >0.8
+  const mapped = progress < 0.8 ? Math.pow(progress, 1.1) : 0.8 + Math.pow((progress - 0.8)/0.2, 2) * 0.2;
+  setPlaneAt(mapped, mapped*28 - 14);
+  trail.style.opacity = Math.min(1, 0.1 + mapped*1.2);
+  if(remaining <= 0){
+    countdownEl.textContent = '00d 00h 00m 00s';
+    triggeredArrival();
+    clearInterval(countdownTimer);
+  }
+}
+
+function startCountdown(){ if(countdownTimer) clearInterval(countdownTimer); updateCountdownAndPlane(); countdownTimer = setInterval(()=>{ updateCountdownAndPlane(); },1000); }
+startCountdown();
+
+/* Test Simulation: slow fast-forward with progressive theme changes */
+let simulated=false, simulatedStart=0, simulatedDuration=8000, simulatedFrom=0;
+
+document.getElementById('testBtn').addEventListener('click', ()=>{
+  if(simulated) return;
+  simulated = true;
+  if(countdownTimer) clearInterval(countdownTimer);
+  const now = new Date();
+  simulatedFrom = Math.max(0, targetDate - now);
+  simulatedStart = performance.now();
+  stopThemePolling();
+  requestAnimationFrame(simulateStep);
+});
+
+function simulateStep(ts){
+  if(!simulated) return;
+  const elapsed = ts - simulatedStart;
+  const t = Math.min(1, elapsed / simulatedDuration);
+  const ease = 1 - Math.pow(1 - t, 3);
+  const currentRemaining = Math.max(0, simulatedFrom * (1 - ease));
+  countdownEl.textContent = formatRemaining(Math.floor(currentRemaining));
+  // plane sim progress
+  let simProgress = 0;
+  if(simulatedFrom <= 0) simProgress = 1;
+  else simProgress = 1 - (currentRemaining / simulatedFrom);
+  simProgress = Math.min(1, Math.max(0, simProgress));
+  // speed mapping: ease-in-exponential to make final portion quick
+  const mapped = simProgress < 0.8 ? Math.pow(simProgress, 1.1) : 0.8 + Math.pow((simProgress - 0.8)/0.2, 2) * 0.2;
+  setPlaneAt(mapped, mapped*28 - 14);
+  trail.style.opacity = Math.min(1, 0.1 + mapped*1.2);
+
+  // simulated time marches toward arrival: pick theme by simulatedNow
+  const simulatedNow = new Date(targetDate.getTime() - currentRemaining);
+  const simulatedTheme = getThemeByHour(simulatedNow.getHours());
+  forceApplyTheme(simulatedTheme);
+
+  if(t < 1) requestAnimationFrame(simulateStep);
+  else {
+    simulated = false;
+    countdownEl.textContent = '00d 00h 00m 00s';
+    // animate plane finishing quickly and then run landing wobble
+    animatePlane(2400, ()=>{
+      triggeredArrival();
+      startCountdown();
+      startThemePolling();
+    });
+  }
+}
+
+/* triggeredArrival: reveal couple and spawn effects */
+function triggeredArrival(){
+  coupleWrap.style.opacity = 1;
+  coupleWrap.style.transform = 'translate(-50%,-6%) scale(1.03)';
+  welcome.style.opacity = 1;
+  spawnParticles(18,'heart');
+  spawnFood(8);
+}
+
+/* theme polling (applies theme based on real clock) */
+let themePoll = null;
+function startThemePolling(){
+  applyTheme(getThemeByHour(new Date().getHours()));
+  if(themePoll) clearInterval(themePoll);
+  themePoll = setInterval(()=> { if(!simulated) applyTheme(getThemeByHour(new Date().getHours())); }, 15000);
+}
+function stopThemePolling(){ if(themePoll) clearInterval(themePoll); themePoll = null; }
+startThemePolling();
+
+/* music button fallback */
+const musicBtn = document.getElementById('musicBtn');
+musicBtn.addEventListener('click', ()=>{
+  if(activeAudio){
+    if(activeAudio.paused){ activeAudio.play().catch(()=>{}); musicBtn.textContent='⏸ Pause Music'; }
+    else{ activeAudio.pause(); musicBtn.textContent='🎵 Play Music'; }
+    return;
+  }
+  const theme = getThemeByHour(new Date().getHours());
+  if(theme === 'morning'){ fadeIn(audioMorning); activeAudio = audioMorning; }
+  else if(theme === 'afternoon'){ fadeIn(audioAfternoon); activeAudio = audioAfternoon; }
+  else if(theme === 'evening'){ fadeIn(audioEvening); activeAudio = audioEvening; }
+  else { fadeIn(audioNight); activeAudio = audioNight; }
+  musicBtn.textContent = '⏸ Pause Music';
+});
+
+/* ensure if already passed we show reveal */
+(function checkIfAlreadyArrived(){ if(new Date() >= targetDate){ countdownEl.textContent = '00d 00h 00m 00s'; setPlaneAt(1, 14); triggeredArrival(); } })();
+
+</script>
+</body>
+</html>
