@@ -19,7 +19,7 @@
   #themeLabel{position:fixed;right:18px;bottom:18px;padding:8px 10px;border-radius:10px;
     background:rgba(255,255,255,0.04);z-index:200;color:#dfefff;font-weight:600}
 
-  #flightArea{position:absolute;left:0;right:0;top:6vh;height:36vh;pointer-events:none;z-index:30}
+  #flightArea{position:absolute;left:0;right:0;top:6vh;height:36vh;pointer-events:none;z-index:30;perspective:1000px;transform-style:preserve-3d}
   svg#mapSvg{width:100%;height:100%;display:block}
   .cityLabel{fill:rgba(255,255,255,0.9);font-size:13px;opacity:.95}
   #trail{stroke:rgba(255,255,255,0.18);stroke-width:4;fill:none;filter:blur(6px);opacity:0}
@@ -31,7 +31,7 @@
 
   .coupleWrap{position:fixed;left:50%;top:44%;transform:translate(-50%,-6%);width:78%;max-width:920px;height:auto;
     aspect-ratio:16/9;border-radius:18px;overflow:hidden;box-shadow:0 40px 120px rgba(2,6,20,0.6);z-index:110;
-    opacity:0;transition:opacity 900ms ease, transform 900ms ease}
+    opacity:0;transition:opacity 900ms ease, transform 900ms ease;will-change:transform,opacity}
   .coupleWrap img{width:100%;height:100%;object-fit:cover;display:block}
 
   /* wobble / runway pulse keyframes for final reveal */
@@ -43,10 +43,11 @@
     100% { transform: translate(-50%,-6%) scale(1.03) rotate(0deg); box-shadow: 0 40px 120px rgba(2,6,20,0.6); }
   }
 
-  #particlesLayer,#foodLayer,#heartsLayer{position:fixed;inset:0;pointer-events:none;z-index:90}
+  #particlesLayer,#foodLayer,#heartsLayer,#fireworksLayer{position:fixed;inset:0;pointer-events:none;z-index:90}
   .particle{position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(180,210,255,0.7);filter:blur(0.8px);opacity:.9}
   .heart{position:absolute;font-size:28px;opacity:0.95;filter:drop-shadow(0 8px 18px rgba(255,80,120,0.12))}
   .food{position:absolute;font-size:28px;opacity:0.95}
+  .firework{position:absolute;width:4px;height:4px;border-radius:50%;background:#ff6b6b;filter:blur(1px)}
 
   canvas#rainCanvas{position:fixed;left:0;top:0;width:100%;height:100%;z-index:80;pointer-events:none}
 
@@ -80,6 +81,7 @@
 <div id="particlesLayer"></div>
 <div id="foodLayer"></div>
 <div id="heartsLayer"></div>
+<div id="fireworksLayer"></div>
 
 <audio id="audioMorning" src="stay_with_me.mp3" preload="auto"></audio>
 <audio id="audioAfternoon" src="stay_with_me.mp3" preload="auto"></audio>
@@ -107,6 +109,7 @@ const coupleWrap = document.getElementById('coupleWrap');
 const particlesLayer = document.getElementById('particlesLayer');
 const heartsLayer = document.getElementById('heartsLayer');
 const foodLayer = document.getElementById('foodLayer');
+const fireworksLayer = document.getElementById('fireworksLayer');
 
 const rainCanvas = document.getElementById('rainCanvas');
 const ctx = rainCanvas.getContext('2d');
@@ -126,14 +129,14 @@ function fadeIn(audio, dur=3000){
   audio.volume = 0;
   audio.play().catch(()=>{});
   const start = performance.now();
-  function tick(now){ const t = Math.min(1,(now-start)/dur); audio.volume = t*0.9; if(t<1) requestAnimationFrame(tick); }
+  function tick(now){ const t = Math.min(1,(now-start)/dur); audio.volume = Math.max(0, Math.min(1, t*0.9)); if(t<1) requestAnimationFrame(tick); }
   requestAnimationFrame(tick);
 }
 function fadeOut(audio, dur=1200){
   if(!audio) return;
   const startVol = audio.volume || 0.9;
   const start = performance.now();
-  function tick(now){ const t = Math.min(1,(now-start)/dur); audio.volume = startVol * (1 - t); if(t<1) requestAnimationFrame(tick); else audio.pause(); }
+  function tick(now){ const t = Math.min(1,(now-start)/dur); audio.volume = Math.max(0, Math.min(1, startVol * (1 - t))); if(t<1) requestAnimationFrame(tick); else audio.pause(); }
   requestAnimationFrame(tick);
 }
 
@@ -193,6 +196,7 @@ function spawnParticles(n,type='particle'){
   }
 }
 function spawnFood(n=6){ const list=['🍜','☕','🍰','🍱','🍦','🍩','🍕','🍪']; for(let i=0;i<n;i++){ const el=document.createElement('div'); el.className='food'; el.textContent=list[i%list.length]; el.style.left=(10+Math.random()*80)+'vw'; el.style.bottom='-40px'; el.style.fontSize=(20+Math.random()*30)+'px'; foodLayer.appendChild(el); const dur=7000+Math.random()*3000; el.animate([{transform:'translateY(0)'},{transform:'translateY(-110vh)'}],{duration:dur,iterations:1,easing:'linear',delay:i*200}); setTimeout(()=>el.remove(),dur+300);}}
+function spawnFireworks(n=20){ for(let i=0;i<n;i++){ const el=document.createElement('div'); el.className='firework'; el.style.left=(Math.random()*100)+'vw'; el.style.top=(Math.random()*100)+'vh'; el.style.backgroundColor=`hsl(${Math.random()*360},100%,70%)`; fireworksLayer.appendChild(el); const dur=2000+Math.random()*2000; el.animate([{transform:'scale(0)',opacity:1},{transform:'scale(10)',opacity:0}],{duration:dur,iterations:1,easing:'ease-out'}); setTimeout(()=>el.remove(),dur);}}
 
 /* RAIN */
 let rainDrops=[], rainRunning=false, lastTime=0;
@@ -205,7 +209,7 @@ function rainTick(now){ if(!rainRunning) return; const dt=(now-lastTime)/1000||0
 /* Plane helpers */
 const pathLen = flightPath.getTotalLength();
 function pointAt(t){ const d = Math.max(0, Math.min(1,t)) * pathLen; return flightPath.getPointAtLength(d); }
-function setPlaneAt(t,rot){ const p = pointAt(t); planeG.setAttribute('transform', `translate(${p.x},${p.y}) rotate(${rot||0})`); }
+function setPlaneAt(t,rot){ const p = pointAt(t); const scale = 0.5 + t * 0.5; planeG.setAttribute('transform', `translate(${p.x},${p.y}) rotate(${rot||0}) scale(${scale})`); }
 
 /* animatePlane with acceleration near end and optional ondone */
 function animatePlane(duration=6000, ondone){
@@ -356,6 +360,7 @@ function triggeredArrival(){
   welcome.style.opacity = 1;
   spawnParticles(18,'heart');
   spawnFood(8);
+  spawnFireworks(30);
 }
 
 /* theme polling (applies theme based on real clock) */
